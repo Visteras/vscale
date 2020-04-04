@@ -15,13 +15,11 @@ import (
 
 type VScale struct {
 	token string
-	fetch func(token string, method HttpMethod, url string, params interface{}) ([]byte, error)
 }
 
 func NewVScale(token string) *VScale {
 	return &VScale{
 		token: token,
-		fetch: fetch,
 	}
 }
 
@@ -38,7 +36,7 @@ const (
 	HEAD    HttpMethod = "HEAD"
 )
 
-func prepareBody(params interface{}) (io.Reader, error) {
+func (v *VScale) prepareBody(params interface{}) (io.Reader, error) {
 	if params == nil {
 		return http.NoBody, nil
 	}
@@ -50,10 +48,10 @@ func prepareBody(params interface{}) (io.Reader, error) {
 	return buffer, nil
 }
 
-func fetch(token string, method HttpMethod, url string, params interface{}) ([]byte, error) {
+func (v *VScale) fetch(method HttpMethod, url string, params interface{}) ([]byte, error) {
 	client := http.Client{}
 
-	buffer, err := prepareBody(params)
+	buffer, err := v.prepareBody(params)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +60,7 @@ func fetch(token string, method HttpMethod, url string, params interface{}) ([]b
 		return nil, err
 	}
 
-	request.Header.Set("X-Token", token)
+	request.Header.Set("X-Token", v.token)
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, err
@@ -72,7 +70,7 @@ func fetch(token string, method HttpMethod, url string, params interface{}) ([]b
 	case 429:
 		log.Println("too many requests, sleep 1 second...")
 		time.Sleep(time.Second)
-		return fetch(token, method, url, params)
+		return v.fetch(method, url, params)
 	case 403:
 		return nil, badToken
 	}
@@ -146,7 +144,7 @@ func (v *VScale) CreateServers(servers []NewServer) ([]*Server, error) {
 }
 
 func (v *VScale) CreateServer(server *NewServer) (*Server, error) {
-	body, err := v.fetch(v.token, POST, "https://api.vscale.io/v1/scalets", server)
+	body, err := v.fetch(POST, "https://api.vscale.io/v1/scalets", server)
 	if err != nil {
 		return nil, fmt.Errorf("[VSCALE][API]: %s", err)
 	}
@@ -161,7 +159,7 @@ func (v *VScale) CreateServer(server *NewServer) (*Server, error) {
 }
 
 func (v *VScale) DeleteServer(ctid int) (*Server, error) {
-	body, err := v.fetch(v.token, DELETE, fmt.Sprintf("https://api.vscale.io/v1/scalets/%d", ctid), nil)
+	body, err := v.fetch(DELETE, fmt.Sprintf("https://api.vscale.io/v1/scalets/%d", ctid), nil)
 	if err != nil {
 		return nil, fmt.Errorf("[VSCALE][API]: %s", err)
 	}
@@ -175,7 +173,7 @@ func (v *VScale) DeleteServer(ctid int) (*Server, error) {
 }
 
 func (v *VScale) GetAccointInfo() (*Account, error) {
-	body, err := v.fetch(v.token, GET, "https://api.vscale.io/v1/account", nil)
+	body, err := v.fetch(GET, "https://api.vscale.io/v1/account", nil)
 	if err != nil {
 		return nil, fmt.Errorf("[VSCALE][API]: %s", err)
 	}
@@ -239,7 +237,7 @@ func (v *VScale) DeleteServers(ctids []int) ([]*Server, error) {
 }
 
 func (v *VScale) GetAllServers() ([]*Server, error) {
-	body, err := v.fetch(v.token, GET, "https://api.vscale.io/v1/scalets", nil)
+	body, err := v.fetch(GET, "https://api.vscale.io/v1/scalets", nil)
 	if err != nil {
 		return nil, fmt.Errorf("[VSCALE][API]: %s", err)
 	}
