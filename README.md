@@ -1,6 +1,6 @@
 # VScale service server deployer
 
-Build: `go build -o .`
+Build: `go build -mod=vendor -o .`
 
 Docker run:
 ```
