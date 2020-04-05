@@ -72,12 +72,13 @@ func (v *VScale) fetch(method HttpMethod, url string, params interface{}) ([]byt
 		time.Sleep(time.Second)
 		return v.fetch(method, url, params)
 	case 403:
-		return nil, badToken
+		return nil, BadRequest
+	case 401:
+		return nil, Unauthorized
 	}
 
 	if response.StatusCode > 299 || response.StatusCode < 200 {
-		e := fmt.Errorf("error from vscale, code: %d, info: %s", response.StatusCode, response.Header.Get("Vscale-Error-Message"))
-		log.Println(e)
+		e := fmt.Errorf("code: %d, info: %s", response.StatusCode, response.Header.Get("Vscale-Error-Message"))
 		return nil, e
 	}
 
@@ -93,7 +94,6 @@ func (v *VScale) CreateServers(servers []NewServer) ([]*Server, error) {
 	wg.Add(n)
 	work := func(server NewServer, cErr chan error, cServer chan *Server) {
 		defer wg.Done()
-		log.Println("Create server ", server.Name)
 		res, err := v.CreateServer(&server)
 		if err != nil {
 			cErr <- err
@@ -239,7 +239,7 @@ func (v *VScale) DeleteServers(ctids []int) ([]*Server, error) {
 func (v *VScale) GetAllServers() ([]*Server, error) {
 	body, err := v.fetch(GET, "https://api.vscale.io/v1/scalets", nil)
 	if err != nil {
-		return nil, fmt.Errorf("[VSCALE][API]: %s", err)
+		return nil, fmt.Errorf("[VSCALE][API]: %w", err)
 	}
 	var result []*Server
 	err = json.Unmarshal(body, &result)
